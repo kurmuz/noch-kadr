@@ -208,7 +208,7 @@ let userLocation = null;
 let deviceHeading = null;
 let compassActive = false;
 let compassCalibrated = false;
-let lastSoundPlayedMin = -1;
+let lastPlayedAlarmMin = -1;
 
 function getAlarms() {
     try{
@@ -454,19 +454,20 @@ function updateReminder() {
     const totalMin=now.getHours()*60+now.getMinutes();
     const alarms=getAlarms();
     let show=false;
+    let matchedAlarmMin=-1;
     for(let i=0;i<alarms.length;i++){
         const a=alarms[i];
         if(!a.on)continue;
         const parts=a.time.split(':');
-        const alarmMin=parseInt(parts[0])*60+parseInt(parts[1]);
-        if(totalMin>=alarmMin&&totalMin<alarmMin+ALARM_DURATION){show=true;break}
+        const am=parseInt(parts[0])*60+parseInt(parts[1]);
+        if(totalMin>=am&&totalMin<am+ALARM_DURATION){show=true;matchedAlarmMin=am;break}
     }
     bar.classList.toggle('show',show);
-    if(show&&lastSoundPlayedMin!==totalMin){
-        lastSoundPlayedMin=totalMin;
+    if(show&&matchedAlarmMin!==lastPlayedAlarmMin){
+        lastPlayedAlarmMin=matchedAlarmMin;
         playReminderSound();
     }
-    if(!show)lastSoundPlayedMin=-1;
+    if(!show)lastPlayedAlarmMin=-1;
 }
 
 function initAzkar() {
