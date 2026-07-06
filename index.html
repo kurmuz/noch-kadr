@@ -168,13 +168,9 @@ nav button.active{color:var(--accent);background:var(--accent-dim)}
             <h3>⚙️ Настроить напоминание</h3>
             <div class="sub">Добавь время — в это время появится напоминание «Время делать зикр»</div>
             <div id="alarmList"></div>
-            <div style="display:flex;gap:8px;margin-top:12px;" id="addAlarmRow">
-                <button class="add-alarm-btn" id="addAlarmBtn" style="flex:1">+ Добавить время</button>
-            </div>
-            <div style="display:none;gap:8px;margin-top:12px;" id="addAlarmForm">
-                <input type="time" id="alarmTimeInput" style="flex:1;background:var(--bg);color:var(--text);border:1px solid rgba(79,195,247,0.2);border-radius:10px;padding:10px;font-size:16px;outline:none">
-                <button style="background:var(--accent);border:none;border-radius:10px;color:var(--bg);font-size:20px;cursor:pointer;padding:8px 16px;font-weight:700" id="alarmConfirmBtn">✓</button>
-                <button style="background:var(--card);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--text-dim);font-size:20px;cursor:pointer;padding:8px 16px" id="alarmCancelBtn">✕</button>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+                <input type="time" id="alarmTimeInput" value="08:00" style="flex:1;background:var(--bg);color:var(--text);border:1px solid rgba(79,195,247,0.2);border-radius:10px;padding:10px;font-size:16px;outline:none">
+                <button class="add-alarm-btn" id="addAlarmBtn">+ Добавить</button>
             </div>
         </div>
     </div>
@@ -246,43 +242,25 @@ function initSettings() {
     const overlay=document.getElementById('settingsOverlay');
     const close=document.getElementById('settingsClose');
     const addBtn=document.getElementById('addAlarmBtn');
-    const addForm=document.getElementById('addAlarmForm');
-    const addRow=document.getElementById('addAlarmRow');
     const timeInput=document.getElementById('alarmTimeInput');
-    const confirmBtn=document.getElementById('alarmConfirmBtn');
-    const cancelBtn=document.getElementById('alarmCancelBtn');
     
     btn.addEventListener('click',()=>{renderAlarms();overlay.classList.add('open')});
     close.addEventListener('click',()=>overlay.classList.remove('open'));
     overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open')});
     
     addBtn.addEventListener('click',()=>{
-        addRow.style.display='none';
-        addForm.style.display='flex';
-        timeInput.value='';
-        timeInput.focus();
-    });
-    cancelBtn.addEventListener('click',()=>{
-        addForm.style.display='none';
-        addRow.style.display='flex';
-    });
-    confirmBtn.addEventListener('click',()=>{
         const val=timeInput.value;
-        if(!val){timeInput.focus();return}
+        if(!val)return;
         const alarms=getAlarms();
+        // Avoid duplicates
+        for(let i=0;i<alarms.length;i++){if(alarms[i].time===val)return}
         alarms.push({time:val,on:true});
         saveAlarms(alarms);
-        addForm.style.display='none';
-        addRow.style.display='flex';
         renderAlarms();
         setTimeout(()=>{
             const list=document.getElementById('alarmList');
             list.lastElementChild&&list.lastElementChild.scrollIntoView({behavior:'smooth'});
         },100);
-    });
-    timeInput.addEventListener('keydown',e=>{
-        if(e.key==='Enter')confirmBtn.click();
-        if(e.key==='Escape')cancelBtn.click();
     });
 }
 
