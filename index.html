@@ -24,6 +24,7 @@ header{background:var(--card);padding:10px 16px 8px;border-bottom:1px solid rgba
 .settings-btn{background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px;flex-shrink:0;transition:color 0.2s}
 .settings-btn:hover{color:var(--accent)}
 #dateDisplay{font-size:12px;color:var(--text-dim);text-align:center}
+#hijriDisplay{font-size:12px;color:var(--gold);text-align:center;margin-top:2px}
 .reminder-overlay{position:fixed;top:0;left:0;right:0;z-index:200;padding:12px 12px 0;pointer-events:none;transform:translateY(-100%);opacity:0;transition:transform 0.4s cubic-bezier(0.4,0,0.2,1),opacity 0.3s}
 .reminder-overlay.show{transform:translateY(0);opacity:1;pointer-events:auto}
 .reminder-card{background:#1e2a3a;border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 0 1px rgba(79,195,247,0.15)}
@@ -128,6 +129,7 @@ nav button.active{color:var(--accent);background:var(--accent-dim)}
             <button class="settings-btn" id="settingsBtn">⚙️</button>
         </div>
         <div id="dateDisplay"></div>
+        <div id="hijriDisplay"></div>
     </header>
     <div class="reminder-overlay" id="reminderOverlay">
         <div class="reminder-card">
@@ -223,6 +225,43 @@ let compassActive = false;
 let compassCalibrated = false;
 let lastPlayedAlarmMin = -1;
 let reminderDismissed = false;
+let lastNotifiedPrayer = -1;
+
+function getHijriDate() {
+    var d=new Date(),y=d.getFullYear(),m=d.getMonth()+1,day=d.getDate();
+    if(m<=2){y--;m+=12}
+    var a=Math.floor(y/100),b=2-a+Math.floor(a/4);
+    var jd=Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+day+b-1524.5;
+    var epoch=1948439.5,days=Math.floor(jd-epoch)+1;
+    var yr=Math.floor((30*days+10646)/10631);
+    var r=days-Math.floor((yr-1)*10631/30)-1;
+    var mo=Math.floor(r/29.5);if(mo>=12)mo=12;if(mo<0)mo=0;
+    var dy=r-Math.floor(mo*29.5)+1;mo++;
+    return {day:Math.floor(dy),month:Math.floor(mo),year:Math.floor(yr)};
+}
+
+var HIJRI_MONTHS = ['Мухаррам','Сафар','Раби-уль-Авваль','Раби-ус-Сани','Джумада-ль-уля','Джумада-ль-ахира','Раджаб','Шаабан','Рамадан','Шавваль','Зуль-Каада','Зуль-Хиджа'];
+
+function playAdhan() {
+    try{
+        var ctx=new(window.AudioContext||window.webkitAudioContext)();
+        var notes=[523,659,784,1047,784,659,523,659,784,1047,784,659,523,659,523];
+        notes.forEach(function(f,i){
+            var osc=ctx.createOscillator();
+            var gain=ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value=f;
+            osc.type='sine';
+            var t=ctx.currentTime+i*0.4;
+            gain.gain.setValueAtTime(0.12,t);
+            gain.gain.exponentialRampToValueAtTime(0.001,t+0.35);
+            osc.start(t);
+            osc.stop(t+0.35);
+        });
+        setTimeout(function(){try{ctx.close()}catch(e){}},notes.length*400+200);
+    }catch(e){}
+}
 
 function getAlarms() {
     try{
@@ -252,6 +291,14 @@ function initCities() {
         localStorage.setItem(SELECTED_CITY_KEY,selectedCity.name);
         updateAll();
     });
+    // Auto-detect city via GPS if no city saved
+    if(!saved&&navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(
+            function(pos){detectCityByGPS(pos.coords.latitude,pos.coords.longitude)},
+            function(){},
+            {timeout:5000}
+        );
+    }
 }
 
 function initSettings() {
@@ -356,6 +403,8 @@ function updateDateDisplay() {
     const months=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
     const days=['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
     document.getElementById('dateDisplay').textContent=`${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    var h=getHijriDate();
+    document.getElementById('hijriDisplay').textContent=`${h.day} ${HIJRI_MONTHS[h.month-1]} ${h.year} г.х.`;
 }
 
 function updateAll() {
@@ -363,6 +412,29 @@ function updateAll() {
     updatePrayerTimes();
     updateReminder();
     updateCityQibla();
+}
+
+function checkPrayerNotification(times) {
+    if(!times||!times.raw)return;
+    var now=new Date();
+    var hm=now.getHours()*60+now.getMinutes();
+    var raw=times.raw;
+    for(var i=0;i<PRAYER_ORDER.length;i++){
+        var t=raw[PRAYER_ORDER[i]];
+        if(t===null)continue;
+        var pt=t*60;
+        if(hm>=pt-1&&hm<pt+1&&i!==lastNotifiedPrayer){
+            lastNotifiedPrayer=i;
+            playAdhan();
+            // Show top notification for prayer
+            var rem=document.getElementById('reminderOverlay');
+            document.querySelector('.reminder-title').textContent='🕌 Время намаза';
+            document.querySelector('.reminder-text').textContent=`${PRAYER_ICONS[PRAYER_ORDER[i]]} ${PRAYER_LABELS[PRAYER_ORDER[i]]}`;
+            rem.classList.add('show');
+            setTimeout(function(){dismissReminder()},10000);
+            break;
+        }
+    }
 }
 
 function updatePrayerTimes() {
@@ -373,7 +445,22 @@ function updatePrayerTimes() {
     currentTimes=times;
     renderPrayers(times);
     renderNextPrayer(times);
+    checkPrayerNotification(times);
     updateReminder();
+}
+
+function detectCityByGPS(lat,lng) {
+    var best=null,bestDist=Infinity;
+    CITIES.forEach(function(c,i){
+        var d=calcDistance(lat,lng,c.lat,c.lng);
+        if(d<bestDist){bestDist=d;best=i}
+    });
+    if(best!==null&&bestDist<100){
+        selectedCity=CITIES[best];
+        document.getElementById('citySelect').value=best;
+        localStorage.setItem(SELECTED_CITY_KEY,selectedCity.name);
+        updateAll();
+    }
 }
 
 function renderPrayers(times) {
@@ -466,6 +553,9 @@ function dismissReminder() {
     if(reminderDismissed)return;
     reminderDismissed=true;
     document.getElementById('reminderOverlay').classList.remove('show');
+    // Reset text for next zikr reminder
+    document.querySelector('.reminder-title').textContent='Напоминание';
+    document.querySelector('.reminder-text').textContent='⏰ Время делать зикр';
 }
 
 function updateReminder() {
