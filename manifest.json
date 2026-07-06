@@ -1,7 +1,7 @@
 {
     "name": "MuslimReminder",
     "short_name": "MuslimReminder",
-    "description": "Время намаза, азкары и компас Киблы",
+    "description": "MuslimReminder — время намаза, азкары и компас Киблы",
     "start_url": "index.html",
     "display": "standalone",
     "orientation": "portrait",
