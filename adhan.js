@@ -57,8 +57,16 @@ const Adhan = (() => {
         const sunrise = sha !== null ? noon - sha : null;
         const sunset = sha !== null ? noon + sha : null;
 
+        // High-latitude fallback: 1/7th of night rule
+        function highLatFallback(base, isFajr) {
+            if (sunset === null || sunrise === null) return null;
+            var nightLen = (sunrise - sunset + 24) % 24;
+            var seventh = nightLen / 7;
+            return isFajr ? (sunrise - seventh + 24) % 24 : (sunset + seventh) % 24;
+        }
+
         const fha = ha(sun.dec, lat, -p.fajr);
-        const fajr = fha !== null ? noon - fha : null;
+        const fajr = fha !== null ? noon - fha : highLatFallback(null, true);
 
         const r = Math.abs(lat - sun.dec);
         const aAlt = atan(1 / (1 + tan(r)));
@@ -70,7 +78,7 @@ const Adhan = (() => {
             isha = sunset !== null ? sunset + 90 / 60 : null;
         } else {
             const iha = ha(sun.dec, lat, -p.isha);
-            isha = iha !== null ? noon + iha : null;
+            isha = iha !== null ? noon + iha : highLatFallback(null, false);
         }
 
         const maghrib = sunset;
