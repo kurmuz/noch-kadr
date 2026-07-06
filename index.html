@@ -57,7 +57,7 @@ nav button.active{color:var(--accent);background:var(--accent-dim)}
 .azkar-cats button.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
 .azkar-list{display:flex;flex-direction:column;gap:8px}
 .azkar-item{background:var(--card);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);border:1px solid transparent;transition:all 0.2s}
-.azkar-item .arabic{font-size:20px;line-height:1.6;direction:rtl;font-family:'Traditional Arabic','Scheherazade New','Amiri',serif;margin-bottom:6px;color:var(--gold)}
+.azkar-item .arabic{font-size:20px;line-height:1.8;direction:rtl;font-family:'Traditional Arabic','Scheherazade New','Amiri',serif;margin-bottom:6px;color:var(--gold);white-space:pre-line}
 .azkar-item .transliteration{font-size:13px;color:var(--accent);font-style:italic;margin-bottom:4px;line-height:1.4}
 .azkar-item .russian{font-size:13px;color:var(--text-dim);line-height:1.5}
 .azkar-item .count{font-size:12px;color:var(--text-dim);margin-top:4px;font-style:italic}
@@ -205,14 +205,14 @@ let userLocation = null;
 let deviceHeading = null;
 let compassActive = false;
 let compassCalibrated = false;
+let lastSoundPlayedMin = -1;
 
 function getAlarms() {
     try{
         var s=localStorage.getItem(ALARMS_KEY);
         if(s!==null){var d=JSON.parse(s);if(Array.isArray(d))return d}
     }catch(e){}
-    // First time: return defaults
-    return [{time:'08:00',on:true},{time:'13:00',on:true},{time:'18:00',on:true},{time:'21:00',on:true}];
+    return [];
 }
 
 function saveAlarms(a) {
@@ -406,6 +406,23 @@ function renderNextPrayer(times) {
     `;
 }
 
+function playReminderSound() {
+    try{
+        var ctx=new(window.AudioContext||window.webkitAudioContext)();
+        var osc=ctx.createOscillator();
+        var gain=ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value=880;
+        osc.type='sine';
+        gain.gain.setValueAtTime(0.15,ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+1.5);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime+1.5);
+        setTimeout(function(){try{ctx.close()}catch(e){}},2000);
+    }catch(e){}
+}
+
 function updateReminder() {
     const bar=document.getElementById('reminderBar');
     const now=new Date();
@@ -420,6 +437,11 @@ function updateReminder() {
         if(totalMin>=alarmMin&&totalMin<alarmMin+ALARM_DURATION){show=true;break}
     }
     bar.classList.toggle('show',show);
+    if(show&&lastSoundPlayedMin!==totalMin){
+        lastSoundPlayedMin=totalMin;
+        playReminderSound();
+    }
+    if(!show)lastSoundPlayedMin=-1;
 }
 
 function initAzkar() {
