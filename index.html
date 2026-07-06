@@ -204,7 +204,11 @@ let compassActive = false;
 let compassCalibrated = false;
 
 function getAlarms() {
-    try{var d=JSON.parse(localStorage.getItem(ALARMS_KEY));if(d&&d.length)return d}catch(e){}
+    try{
+        var s=localStorage.getItem(ALARMS_KEY);
+        if(s!==null){var d=JSON.parse(s);if(Array.isArray(d))return d}
+    }catch(e){}
+    // First time: return defaults
     return [{time:'08:00',on:true},{time:'13:00',on:true},{time:'18:00',on:true},{time:'21:00',on:true}];
 }
 
@@ -304,7 +308,8 @@ function updateAll() {
 function updatePrayerTimes() {
     if(!selectedCity)return;
     const now=new Date();
-    const times=Adhan.calculate(now,selectedCity.lat,selectedCity.lng,selectedCity.tz,'Russia');
+    const method=selectedCity.method||'Russia';
+    const times=Adhan.calculate(now,selectedCity.lat,selectedCity.lng,selectedCity.tz,method);
     currentTimes=times;
     renderPrayers(times);
     renderNextPrayer(times);
