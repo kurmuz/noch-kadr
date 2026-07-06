@@ -435,9 +435,16 @@ function renderNextPrayer(times) {
 
 function playReminderSound() {
     try{
-        var a=new Audio('уведом.mp3');
-        a.volume=0.7;
-        a.play().catch(function(){});
+        var i=0;
+        function playNext(){
+            if(i>=5)return;
+            i++;
+            var a=new Audio('уведом.mp3');
+            a.volume=0.7;
+            a.addEventListener('ended',playNext);
+            a.play().catch(playNext);
+        }
+        playNext();
     }catch(e){}
 }
 
