@@ -57,7 +57,7 @@ nav button.active{color:var(--accent);background:var(--accent-dim)}
 .azkar-cats button.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
 .azkar-list{display:flex;flex-direction:column;gap:8px}
 .azkar-item{background:var(--card);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);border:1px solid transparent;transition:all 0.2s}
-.azkar-item .arabic{font-size:20px;line-height:1.8;direction:rtl;font-family:'Traditional Arabic','Scheherazade New','Amiri',serif;margin-bottom:6px;color:var(--gold);white-space:pre-line}
+.azkar-item .arabic{font-size:21px;line-height:2.2;direction:rtl;font-family:'Noto Naskh Arabic','Traditional Arabic','Amiri','Arial',sans-serif;margin-bottom:6px;color:var(--gold);word-break:keep-all;unicode-bidi:embed}
 .azkar-item .transliteration{font-size:13px;color:var(--accent);font-style:italic;margin-bottom:4px;line-height:1.4}
 .azkar-item .russian{font-size:13px;color:var(--text-dim);line-height:1.5}
 .azkar-item .count{font-size:12px;color:var(--text-dim);margin-top:4px;font-style:italic}
@@ -466,8 +466,10 @@ function renderAzkar(cat) {
     items.forEach(item=>{
         const el=document.createElement('div');
         el.className='azkar-item';
+        var arText=item.arabic;
+        if(arText.indexOf('\n')>=0)arText=arText.split('\n').join('<br>');
         el.innerHTML=`
-            <div class="arabic">${item.arabic}</div>
+            <div class="arabic">${arText}</div>
             <div class="transliteration">${item.transliteration}</div>
             <div class="russian">${item.russian}</div>
             ${item.count>1?`<div class="count">Повторить: ${item.count} раз</div>`:''}
