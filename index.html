@@ -435,18 +435,9 @@ function renderNextPrayer(times) {
 
 function playReminderSound() {
     try{
-        var ctx=new(window.AudioContext||window.webkitAudioContext)();
-        var osc=ctx.createOscillator();
-        var gain=ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.value=880;
-        osc.type='sine';
-        gain.gain.setValueAtTime(0.15,ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+1.5);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime+1.5);
-        setTimeout(function(){try{ctx.close()}catch(e){}},2000);
+        var a=new Audio('уведом.mp3');
+        a.volume=0.7;
+        a.play().catch(function(){});
     }catch(e){}
 }
 
