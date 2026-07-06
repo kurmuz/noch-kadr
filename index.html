@@ -17,10 +17,12 @@
 html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 #app{display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto;position:relative}
 header{background:var(--card);padding:10px 16px 8px;border-bottom:1px solid rgba(79,195,247,0.1);flex-shrink:0}
-.header-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
-.logo{font-size:16px;font-weight:700;color:var(--accent);white-space:nowrap;letter-spacing:0.5px}
+.header-top{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.logo{font-size:16px;font-weight:700;color:var(--accent);white-space:nowrap;letter-spacing:0.5px;flex-shrink:0}
 .logo span{color:var(--gold)}
-.header-top select{background:var(--bg);color:var(--text);border:1px solid rgba(79,195,247,0.2);border-radius:8px;padding:6px 10px;font-size:14px;outline:none;max-width:160px;cursor:pointer}
+.header-top select{background:var(--bg);color:var(--text);border:1px solid rgba(79,195,247,0.2);border-radius:8px;padding:6px 10px;font-size:14px;outline:none;flex:1;min-width:0;cursor:pointer}
+.settings-btn{background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px;flex-shrink:0;transition:color 0.2s}
+.settings-btn:hover{color:var(--accent)}
 #dateDisplay{font-size:12px;color:var(--text-dim);text-align:center}
 .reminder{background:linear-gradient(135deg,rgba(79,195,247,0.12),rgba(79,195,247,0.05));border:1px solid rgba(79,195,247,0.2);border-radius:var(--radius);padding:8px 16px;margin:6px 12px 0;text-align:center;font-size:14px;color:var(--accent);font-weight:600;letter-spacing:0.3px;display:none;flex-shrink:0;animation:pulseReminder 2s ease-in-out infinite}
 .reminder.show{display:block}
@@ -81,6 +83,25 @@ nav button.active{color:var(--accent);background:var(--accent-dim)}
 .location-status.error{color:var(--danger)}
 .location-status.success{color:var(--success)}
 .tick{position:absolute;width:2px;height:10px;background:rgba(79,195,247,0.3);left:50%;transform-origin:50% 115px;margin-left:-1px}
+
+/* Settings modal */
+.settings-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;justify-content:center;align-items:flex-start;padding-top:60px}
+.settings-overlay.open{display:flex}
+.settings-panel{background:var(--card);border-radius:var(--radius) var(--radius) 0 0;width:100%;max-width:480px;max-height:80vh;overflow-y:auto;padding:20px;box-shadow:0 -8px 40px rgba(0,0,0,0.4);animation:slideUp 0.25s ease-out}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.settings-panel h3{font-size:16px;font-weight:700;color:var(--accent);margin-bottom:16px;text-align:center}
+.settings-panel .close-btn{float:right;background:none;border:none;color:var(--text-dim);font-size:22px;cursor:pointer;padding:0;line-height:1}
+.settings-prayer{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(79,195,247,0.08)}
+.settings-prayer:last-child{border-bottom:none}
+.settings-prayer .sp-name{font-size:14px;font-weight:500}
+.settings-prayer .sp-icon{font-size:18px;margin-right:8px}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0}
+.toggle .slider{position:absolute;inset:0;background:var(--text-dim);border-radius:12px;transition:0.3s}
+.toggle .slider::before{content:'';position:absolute;width:20px;height:20px;left:2px;bottom:2px;background:var(--card);border-radius:50%;transition:0.3s}
+.toggle input:checked+.slider{background:var(--accent)}
+.toggle input:checked+.slider::before{transform:translateX(20px)}
+
 @media(max-width:360px){.compass{width:220px;height:220px}.compass-inner{width:195px;height:195px}.needle{height:75px}.needle-top{border-bottom-width:32px;border-left-width:6px;border-right-width:6px}.needle-bottom{height:43px}.tick{transform-origin:50% 98px}}
 @media(min-width:480px){.compass{width:300px;height:300px}.compass-inner{width:265px;height:265px}.tick{transform-origin:50% 130px}}
 </style>
@@ -91,11 +112,12 @@ nav button.active{color:var(--accent);background:var(--accent-dim)}
         <div class="header-top">
             <div class="logo">Ночь <span>Кадр</span></div>
             <select id="citySelect"></select>
+            <button class="settings-btn" id="settingsBtn">⚙️</button>
         </div>
         <div id="dateDisplay"></div>
     </header>
     <div id="reminderBar" class="reminder">
-        🤲 Помяни Господа своего!
+        🤲 Время делать зикр
     </div>
     <main>
         <section id="tabPrayer" class="tab-content active">
@@ -135,6 +157,16 @@ nav button.active{color:var(--accent);background:var(--accent-dim)}
             </div>
         </section>
     </main>
+
+    <div class="settings-overlay" id="settingsOverlay">
+        <div class="settings-panel">
+            <button class="close-btn" id="settingsClose">✕</button>
+            <h3>⚙️ Настройки напоминаний</h3>
+            <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;text-align:center">Напоминание «Время делать зикр» будет показываться в начале каждого выбранного намаза</p>
+            <div id="settingsList"></div>
+        </div>
+    </div>
+
     <nav id="tabNav">
         <button data-tab="prayer" class="active">
             <span class="nav-icon">🕌</span> Намаз
@@ -154,6 +186,7 @@ const PRAYER_LABELS = {fajr:'Фаджр',dhuhr:'Зухр',asr:'Аср',maghrib:'
 const PRAYER_ICONS = {fajr:'🌙',dhuhr:'☀️',asr:'🌤',maghrib:'🌅',isha:'🌃'};
 const KAABA = {lat:21.4225,lng:39.8262};
 const SELECTED_CITY_KEY = 'nochkadr_city';
+const REMINDER_SETTINGS_KEY = 'nochkadr_reminder';
 
 let selectedCity = null;
 let currentTab = 'prayer';
@@ -163,6 +196,21 @@ let userLocation = null;
 let deviceHeading = null;
 let compassActive = false;
 let compassCalibrated = false;
+
+function defaultReminderSettings() {
+    const s={};
+    PRAYER_ORDER.forEach(p=>{s[p]=true});
+    return s;
+}
+
+function getReminderSettings() {
+    try{return JSON.parse(localStorage.getItem(REMINDER_SETTINGS_KEY))||defaultReminderSettings()}
+    catch(e){return defaultReminderSettings()}
+}
+
+function saveReminderSettings(s) {
+    localStorage.setItem(REMINDER_SETTINGS_KEY,JSON.stringify(s));
+}
 
 function initCities() {
     const sel = document.getElementById('citySelect');
@@ -179,6 +227,42 @@ function initCities() {
         selectedCity=CITIES[parseInt(sel.value)];
         localStorage.setItem(SELECTED_CITY_KEY,selectedCity.name);
         updateAll();
+    });
+}
+
+function initSettings() {
+    const btn=document.getElementById('settingsBtn');
+    const overlay=document.getElementById('settingsOverlay');
+    const close=document.getElementById('settingsClose');
+    btn.addEventListener('click',()=>{renderSettings();overlay.classList.add('open')});
+    close.addEventListener('click',()=>overlay.classList.remove('open'));
+    overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open')});
+}
+
+function renderSettings() {
+    const container=document.getElementById('settingsList');
+    container.innerHTML='';
+    const settings=getReminderSettings();
+    PRAYER_ORDER.forEach(name=>{
+        const div=document.createElement('div');
+        div.className='settings-prayer';
+        div.innerHTML=`
+            <div>
+                <span class="sp-icon">${PRAYER_ICONS[name]}</span>
+                <span class="sp-name">${PRAYER_LABELS[name]} — напоминание</span>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" ${settings[name]?'checked':''}>
+                <span class="slider"></span>
+            </label>
+        `;
+        const checkbox=div.querySelector('input');
+        checkbox.addEventListener('change',()=>{
+            settings[name]=checkbox.checked;
+            saveReminderSettings(settings);
+            updateReminder();
+        });
+        container.appendChild(div);
     });
 }
 
@@ -264,13 +348,11 @@ function renderNextPrayer(times) {
     const nextTime=times[name];
     const nextRaw=raw[name];
     if(nextRaw===null){container.innerHTML='';return;}
-
     let diffMin=Math.round(nextRaw*60-hm);
     if(diffMin<0)diffMin+=1440;
     const hours=Math.floor(diffMin/60);
     const mins=diffMin%60;
     const cd=hours>0?`${hours}ч ${mins}м`:`${mins}м`;
-
     container.innerHTML=`
         <div class="label">Следующий намаз</div>
         <div class="name">${PRAYER_ICONS[name]} ${PRAYER_LABELS[name]}</div>
@@ -281,25 +363,29 @@ function renderNextPrayer(times) {
 
 function updateReminder() {
     const bar=document.getElementById('reminderBar');
-    if(!currentTimes){bar.classList.remove('show');return;}
-    const idx=currentPrayerIdx();
-    if(idx>=0){
-        const name=PRAYER_ORDER[idx];
-        const now=new Date();
-        const hm=now.getHours()*60+now.getMinutes();
-        const raw=currentTimes.raw[name];
-        if(raw!==null&&hm>=raw*60-1){
-            // Check if we're within the prayer window (until next prayer or 2h)
-            let nextRaw;
-            if(idx<PRAYER_ORDER.length-1)nextRaw=currentTimes.raw[PRAYER_ORDER[idx+1]];
-            else nextRaw=raw+24;
-            if(nextRaw!==null&&hm<nextRaw*60){
-                bar.classList.add('show');
-                return;
-            }
-        }
-    }
     bar.classList.remove('show');
+    if(!currentTimes)return;
+    const settings=getReminderSettings();
+    let anyEnabled=false;
+    PRAYER_ORDER.forEach(p=>{if(settings[p])anyEnabled=true});
+    if(!anyEnabled)return;
+
+    const idx=currentPrayerIdx();
+    if(idx<0)return;
+    const name=PRAYER_ORDER[idx];
+    if(!settings[name])return;
+
+    const now=new Date();
+    const hm=now.getHours()*60+now.getMinutes();
+    const raw=currentTimes.raw[name];
+    if(raw===null)return;
+    if(hm<raw*60-1)return;
+
+    // Show reminder until next prayer starts
+    let endRaw;
+    if(idx<PRAYER_ORDER.length-1)endRaw=currentTimes.raw[PRAYER_ORDER[idx+1]];
+    else endRaw=raw+24;
+    if(endRaw!==null&&hm<endRaw*60)bar.classList.add('show');
 }
 
 function initAzkar() {
@@ -358,7 +444,7 @@ function updateCityQibla() {
     const dist=calcDistance(selectedCity.lat,selectedCity.lng,KAABA.lat,KAABA.lng);
     const el=document.getElementById('cityQiblaInfo');
     el.innerHTML=`По городу ${selectedCity.name}: ${Math.round(bearing)}° (${dirs[idx]}), ${Math.round(dist)} км до Каабы`;
-    if(!userLocation&&!document.querySelector('#locationStatus').classList.contains('success')){
+    if(!userLocation||!document.querySelector('#locationStatus').classList.contains('success')){
         document.getElementById('qiblaDegrees').textContent=Math.round(bearing)+'°';
         document.getElementById('qiblaDirection').textContent=`${Math.round(bearing)}° от N (${dirs[idx]})`;
         document.getElementById('qiblaDistance').textContent=`${Math.round(dist)} км до Каабы`;
@@ -368,8 +454,6 @@ function updateCityQibla() {
 function initCompass() {
     if(compassActive)return;
     compassActive=true;
-
-    // Draw ticks
     const inner=document.getElementById('compassInner');
     for(let i=0;i<72;i++){
         const tick=document.createElement('div');
@@ -377,23 +461,18 @@ function initCompass() {
         tick.style.transform=`rotate(${i*5}deg)`;
         inner.appendChild(tick);
     }
-
     const statusEl=document.getElementById('locationStatus');
-
-    // Use city coordinates as fallback
     if(selectedCity){
         userLocation={lat:selectedCity.lat,lng:selectedCity.lng};
         statusEl.textContent='Используются координаты города (для компаса нужен GPS)';
         statusEl.className='location-status';
         updateQibla();
     }
-
     if(!navigator.geolocation){
         statusEl.textContent='Geolocation недоступен на этом устройстве';
         statusEl.className='location-status error';
         return;
     }
-
     navigator.geolocation.getCurrentPosition(
         pos=>{
             userLocation={lat:pos.coords.latitude,lng:pos.coords.longitude};
@@ -410,17 +489,10 @@ function initCompass() {
         },
         {enableHighAccuracy:true,timeout:8000}
     );
-
-    // Request orientation permission on iOS
     if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
         DeviceOrientationEvent.requestPermission().then(state=>{
-            if(state==='granted'){
-                window.addEventListener('deviceorientation',handleOrientation);
-                statusEl.textContent+=' • Компас активен';
-            }
-        }).catch(()=>{
-            window.addEventListener('deviceorientation',handleOrientation);
-        });
+            if(state==='granted')window.addEventListener('deviceorientation',handleOrientation);
+        }).catch(()=>window.addEventListener('deviceorientation',handleOrientation));
     }else{
         window.addEventListener('deviceorientation',handleOrientation);
     }
@@ -430,15 +502,10 @@ function handleOrientation(e) {
     let heading=null;
     if(e.webkitCompassHeading!==undefined&&e.webkitCompassHeading!==null){
         heading=e.webkitCompassHeading;
-        if(!compassCalibrated){
-            compassCalibrated=true;
-            document.getElementById('locationStatus').textContent='Компас откалиброван ✓';
-        }
+        if(!compassCalibrated){compassCalibrated=true;}
     }else if(e.alpha!==null){
         heading=e.alpha;
-        if(e.absolute===true&&!compassCalibrated){
-            compassCalibrated=true;
-        }
+        if(e.absolute===true&&!compassCalibrated){compassCalibrated=true;}
     }
     if(heading!==null){
         deviceHeading=heading;
@@ -458,11 +525,9 @@ function updateQibla() {
     document.getElementById('needle').style.transform=`rotate(${qiblaDirection}deg)`;
     document.getElementById('needleCenter').style.left='50%';
     document.getElementById('needleCenter').style.top='50%';
-
     const dirs=['N','СВ','В','ЮВ','Ю','ЮЗ','З','СЗ'];
     const idx=Math.round(bearing/45)%8;
     document.getElementById('qiblaDirection').textContent=`${Math.round(bearing)}° от N (${dirs[idx]})`;
-
     const dist=calcDistance(userLocation.lat,userLocation.lng,KAABA.lat,KAABA.lng);
     if(dist<1)document.getElementById('qiblaDistance').textContent='Вы в Мекке! 🕋';
     else document.getElementById('qiblaDistance').textContent=`${Math.round(dist)} км до Каабы`;
@@ -487,6 +552,7 @@ function calcDistance(lat1,lng1,lat2,lng2) {
 
 document.addEventListener('DOMContentLoaded',()=>{
     initCities();
+    initSettings();
     initAzkar();
     initTabNav();
     updateAll();
