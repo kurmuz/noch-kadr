@@ -1,6 +1,6 @@
 {
-    "name": "Ночь Кадр",
-    "short_name": "Ночь Кадр",
+    "name": "MuslimReminder",
+    "short_name": "MuslimReminder",
     "description": "Время намаза, азкары и компас Киблы",
     "start_url": "index.html",
     "display": "standalone",
