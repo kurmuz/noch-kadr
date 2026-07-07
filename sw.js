@@ -1,5 +1,5 @@
-const CACHE = 'nochkadr-v2';
-const FILES = ['index.html', 'cities.js', 'azkar.js', 'adhan.js', 'manifest.json'];
+const CACHE = 'nochkadr-v3';
+const FILES = ['index.html', 'cities.js', 'azkar.js', 'adhan.js', 'manifest.json', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {
     e.waitUntil(
