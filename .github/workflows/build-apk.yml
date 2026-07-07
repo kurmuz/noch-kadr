@@ -9,41 +9,45 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: 17
-
-      - name: Install Bubblewrap
-        run: npm install -g @bubblewrap/cli
-
-      - name: Init TWA project
+      - name: Call PWABuilder Cloud API
         run: |
-          echo "n" | bubblewrap init \
-            --manifest="https://kurmuz.github.io/noch-kadr/manifest.json" \
-            --directory="./twa" || true
-          ls -la ./twa/
+          curl -X POST "https://pwabuilder.com/cloud/generateAppPackage" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "host": "https://kurmuz.github.io/noch-kadr/",
+              "name": "MuslimReminder",
+              "launcherName": "MuslimReminder",
+              "packageId": "com.muslimreminder.app",
+              "appVersion": "1.0.0.0",
+              "appVersionCode": 1,
+              "webManifestUrl": "https://kurmuz.github.io/noch-kadr/manifest.json",
+              "backgroundColor": "#0D1B2A",
+              "themeColor": "#0D1B2A",
+              "navigationColor": "#0D1B2A",
+              "display": "standalone",
+              "orientation": "portrait",
+              "signing": null,
+              "signingMode": "new",
+              "includeSourceCode": false,
+              "fallbackType": "customtabs",
+              "enableNotifications": false,
+              "enableSiteSettingsShortcut": true,
+              "isChromeOSOnly": false,
+              "features": {
+                "locationDelegation": { "enabled": false },
+                "playBilling": { "enabled": false }
+              }
+            }' \
+            --output package.zip
 
-      - name: Build APK
+      - name: Extract and upload APK
         run: |
-          cd twa
-          bubblewrap build || echo "--- trying gradle directly ---"
-          if [ ! -f app/build/outputs/apk/release/*.apk ]; then
-            chmod +x gradlew
-            ./gradlew assembleRelease
-          fi
+          unzip -o package.zip -d apk-output
+          ls -la apk-output/
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: muslim-reminder-apk
-          path: |
-            twa/app/build/outputs/apk/release/*.apk
-            twa/app/build/outputs/apk/debug/*.apk
+          path: apk-output/*.apk
           if-no-files-found: warn
